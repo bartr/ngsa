@@ -143,7 +143,7 @@ jobs:
       run: |
         # run loderunner validation test
         # fail on any validation errors
-        docker run --rm --network ngsa lr -s localhost:4122 --max-errors 1 -f benchmark.json
+        docker run --rm --network ngsa lr -s ds:4122 --max-errors 1 -f benchmark.json
 
     - name: Display failed docker logs
       if: ${{ failure() }}
