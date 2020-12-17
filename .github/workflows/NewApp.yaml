@@ -224,9 +224,9 @@ jobs:
         fi
 
     - name: Docker Tag and Push
-    if: ${{ env.DOCKER_SET == 'true' }}
-    run: |
-      # Push to the repo
-      docker push $APP_REPO
-      docker push $DS_REPO
-      docker push $LR_REPO
+      if: ${{ env.DOCKER_SET == 'true' }}
+      run: |
+        # Push to the repo
+        docker push $APP_REPO
+        docker push $DS_REPO
+        docker push $LR_REPO
