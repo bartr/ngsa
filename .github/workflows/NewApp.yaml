@@ -69,3 +69,42 @@ jobs:
         git checkout ${{ github.base_ref }}
         git pull
 
+    - name: PR Merged
+      if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged }}
+      run: |
+
+        # Do not build on PR Merged
+        
+        # Skip remaining steps
+        echo "DOCKER_SET=false" >> $GITHUB_ENV
+        echo "COSMOS_SET=false" >> $GITHUB_ENV
+        echo "BUILD=false" >> $GITHUB_ENV
+
+    - name: Docker Login
+      if: ${{ env.DOCKER_SET == 'true' }}
+      run: |
+        # login to dockerhub
+        echo "${{ secrets.DOCKER_PAT }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+
+    - name: Docker Pull Test
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        # Pull the latest image if needed
+        # This doesn't have to be a separate step, but makes the output easier to read and debug
+        docker pull mcr.microsoft.com/dotnet/core/sdk:3.1
+
+    - name: Docker Build Data Service
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        docker build . -t ds -f NewApp/ngsa-csharp/Ngsa.DataService/Dockerfile --target test
+
+    - name: Docker Build App
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        docker build . -t app -f NewApp/ngsa-csharp/Ngsa.App/Dockerfile --target test
+
+    - name: Docker Build Loadrunner
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        docker build . -t LR -f NewApp/ngsa-csharp/Ngsa.LodeRunner/Dockerfile
+  
