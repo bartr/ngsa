@@ -195,28 +195,28 @@ jobs:
         echo DS_VERSION=`docker run --rm ds --version` >> $GITHUB_ENV
         echo APP_VERSION=`docker run --rm app --version` >> $GITHUB_ENV
         echo LR_VERSION=`docker run --rm lr --version` >> $GITHUB_ENV
+        
+        echo $GITHUB_ENV
   
     - name: Docker Tag
       if: ${{ env.BUILD == 'true' }}
       run: |
         # Tag the image with :beta and semver
-        semver=$APP_VERSION-${{ github.run_number }}
         docker tag app $APP_REPO:beta
-        docker tag app $APP_REPO:beta-$semver
+        docker tag app $APP_REPO:beta-$APP_VERSION-${{ github.run_number }}
 
-        semver=$DS_VERSION-${{ github.run_number }}
         docker tag ds $DS_REPO:beta
-        docker tag ds $DS_REPO:beta-$semver
+        docker tag ds $DS_REPO:beta-$DS_VERSION-${{ github.run_number }}
 
-        semver=$LR_VERSION-${{ github.run_number }}
         docker tag lr $LR_REPO:beta
-        docker tag lr $LR_REPO:beta-$semver
+        docker tag lr $LR_REPO:beta-$LR_VERSION-${{ github.run_number }}
 
         # Tag image based on repo tag if a github label
         if [[ "${{ github.ref }}" == "refs/tags/"* ]]
         then
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,'  | sed -e 's/^v//')
+
           # tag the image with :version and :latest
           docker tag app $APP_REPO:$VERSION
           docker tag app $APP_REPO:latest
@@ -226,7 +226,7 @@ jobs:
           docker tag lr $LR_REPO:latest
         fi
 
-    - name: Docker Tag and Push
+    - name: Docker Push
       if: ${{ env.DOCKER_SET == 'true' }}
       run: |
         # Push to the repo
