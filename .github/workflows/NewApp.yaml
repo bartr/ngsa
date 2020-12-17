@@ -140,7 +140,7 @@ jobs:
       run: |
         # run loderunner validation test
         # fail on any validation errors
-        docker run --name lr lr -s localhost:4122 --max-errors 1 -f baseline.json benchmark.json
+        docker run --name lr lr -s localhost:4122 --max-errors 1 -f benchmark.json
 
     - name: Display failed docker logs
       if: ${{ failure() }}
@@ -156,3 +156,77 @@ jobs:
         # display the results
         docker logs ds | tail -n 15
 
+    - name: Display full test results
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        # display the results
+        docker logs ds
+
+        # remove the container
+        docker rm -f ds
+
+    - name: Docker Pull Release
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        # Pull the latest image if needed
+        docker pull mcr.microsoft.com/dotnet/core/aspnet:3.1-alpine
+
+    - name: Docker Build Release
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        # build image
+        if [[ "${{ github.ref }}" == "refs/tags/"* ]]
+        then
+          docker build . -t ds -f NewApp/ngsa-csharp/Ngsa.DataService/Dockerfile --build-arg TAG=true
+          docker build . -t app -f NewApp/ngsa-csharp/Ngsa.App/Dockerfile --build-arg TAG=true
+          docker build . -t lr -f NewApp/ngsa-csharp/Ngsa.LodeRunner/Dockerfile --build-arg TAG=true
+        else
+          docker build . -t ds -f NewApp/ngsa-csharp/Ngsa.DataService/Dockerfile
+          docker build . -t app -f NewApp/ngsa-csharp/Ngsa.App/Dockerfile
+          docker build . -t lr -f NewApp/ngsa-csharp/Ngsa.LodeRunner/Dockerfile
+        fi
+
+    - name: Get Version
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        echo DS_VERSION=`docker run --rm ds --version` >> $GITHUB_ENV
+        echo APP_VERSION=`docker run --rm app --version` >> $GITHUB_ENV
+        echo LR_VERSION=`docker run --rm lr --version` >> $GITHUB_ENV
+  
+    - name: Docker Tag
+      if: ${{ env.BUILD == 'true' }}
+      run: |
+        # Tag the image with :beta and semver
+        semver=$APP_VERSION-${{ github.run_number }}
+        docker tag app $APP_REPO:beta
+        docker tag app $APP_REPO:beta-$semver
+
+        semver=$DS_VERSION-${{ github.run_number }}
+        docker tag ds $DS_REPO:beta
+        docker tag ds $DS_REPO:beta-$semver
+
+        semver=$LR_VERSION-${{ github.run_number }}
+        docker tag lr $LR_REPO:beta
+        docker tag lr $LR_REPO:beta-$semver
+
+        # Tag image based on repo tag if a github label
+        if [[ "${{ github.ref }}" == "refs/tags/"* ]]
+        then
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,'  | sed -e 's/^v//')
+          # tag the image with :version and :latest
+          docker tag app $APP_REPO:$VERSION
+          docker tag app $APP_REPO:latest
+          docker tag ds $DS_REPO:$VERSION
+          docker tag ds $DS_REPO:latest
+          docker tag lr $LR_REPO:$VERSION
+          docker tag lr $LR_REPO:latest
+        fi
+
+    - name: Docker Tag and Push
+    if: ${{ env.DOCKER_SET == 'true' }}
+    run: |
+      # Push to the repo
+      docker push $APP_REPO
+      docker push $DS_REPO
+      docker push $LR_REPO
