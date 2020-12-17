@@ -8,7 +8,7 @@ on:
 
     paths:
     - 'NewApp/ngsa-csharp/**'
-    - '.github/workflows/new.yaml'
+    - '.github/workflows/NewApp.yaml'
 
   push:
     branches:
@@ -16,7 +16,7 @@ on:
 
     paths:
     - 'NewApp/ngsa-csharp/**'
-    - '.github/workflows/new.yaml'
+    - '.github/workflows/NewApp.yaml'
 
     tags:
       - v*
@@ -56,4 +56,16 @@ jobs:
           echo '${{ secrets.CosmosKey }}' > src/ngsa/app/secrets/CosmosKey
           echo "COSMOS_SET=true" >> $GITHUB_ENV
         fi
+
+    - name: PR Closed
+      if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && ! github.event.pull_request.merged }}
+      run: |
+
+        # handle PR Closed event by building / pushing main branch
+        
+        # checkout parent branch (usually "main")
+        git config pull.ff only
+        git fetch --all
+        git checkout ${{ github.base_ref }}
+        git pull
 
