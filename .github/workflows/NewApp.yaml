@@ -111,8 +111,11 @@ jobs:
     - name: Start data service
       if: ${{ env.BUILD == 'true' }}
       run: |
+        # create the docker network
+        docker network create ngsa
+
         # run the app
-        docker run -d --name ds -p 4122:4122 ds --in-memory
+        docker run -d --name ds --network ngsa -p 4122:4122 ds --in-memory
         
         echo "Waiting for web server to start ..."
         
@@ -140,7 +143,7 @@ jobs:
       run: |
         # run loderunner validation test
         # fail on any validation errors
-        docker run --name lr lr -s localhost:4122 --max-errors 1 -f benchmark.json
+        docker run -it --rm --network ngsa lr -s localhost:4122 --max-errors 1 -f benchmark.json
 
     - name: Display failed docker logs
       if: ${{ failure() }}
